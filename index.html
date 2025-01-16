@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIBS Countdown</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .timer { font-size: 3em; }
+    </style>
+</head>
+<body>
+    <h1>Call DIBS on a Target</h1>
+
+    <!-- Dropdown for selecting DIBS or FREE -->
+    <select id="targetSelect" onchange="handleSelectChange()">
+        <option value="FREE">FREE</option>
+        <option value="DIBS">DIBS</option>
+    </select>
+    
+    <!-- Display the countdown timer -->
+    <div class="timer" id="countdownTimer">5:00</div>
+    
+    <script>
+        let countdownInterval;
+        let endTime;
+
+        // Initialize the Google Sheets API
+        function initializeApi() {
+            gapi.client.init({
+                apiKey: 'YOUR_API_KEY',
+                clientId: 'YOUR_CLIENT_ID',
+                discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
+                scope: "https://www.googleapis.com/auth/spreadsheets"
+            }).then(function () {
+                gapi.auth2.getAuthInstance().signIn();
+            });
+        }
+
+        // Load the Google API Client Library
+        function loadGoogleApi() {
+            gapi.load("client:auth2", initializeApi);
+        }
+
+        // Handle when the "DIBS" option is selected
+        function handleSelectChange() {
+            const selectedValue = document.getElementById("targetSelect").value;
+
+            if (selectedValue === "DIBS") {
+                startCountdown();
+                updateSheet("DIBS");
+            } else {
+                resetCountdown();
+                updateSheet("FREE");
+            }
+        }
+
+        // Start the countdown timer
+        function startCountdown() {
+            const timerDisplay = document.getElementById("countdownTimer");
+            endTime = new Date().getTime() + 5 * 60 * 1000; // 5 minutes
+
+            countdownInterval = setInterval(function () {
+                const now = new Date().getTime();
+                const remainingTime = endTime - now;
+
+                if (remainingTime <= 0) {
+                    clearInterval(countdownInterval);
+                    timerDisplay.textContent = "00:00";
+                    updateSheet("FREE");
+                } else {
+                    const minutes = Math.floor(remainingTime / 60000);
+                    const seconds = Math.floor((remainingTime % 60000) / 1000);
+                    timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
+                }
+            }, 1000);
+        }
+
+        // Reset the countdown
+        function resetCountdown() {
+            clearInterval(countdownInterval);
+            document.getElementById("countdownTimer").textContent = "5:00";
+        }
+
+        // Update the Google Sheet with the new status ("DIBS" or "FREE")
+        function updateSheet(status) {
+            const spreadsheetId = 'YOUR_SPREADSHEET_ID';
+            const range = 'Sheet1!F2'; // Assuming you're updating the value in cell F2 (you can adjust this)
+            const valueRange = {
+                majorDimension: "ROWS",
+                values: [[status]]
+            };
+
+            const request = gapi.client.sheets.spreadsheets.values.update({
+                spreadsheetId: spreadsheetId,
+                range: range,
+                valueInputOption: "RAW",
+                resource: valueRange
+            });
+
+            request.then(function (response) {
+                console.log('Sheet updated:', response);
+            });
+        }
+
+        // Load the Google API client library
+        loadGoogleApi();
+    </script>
+
+    <!-- Load the Google API client library -->
+    <script src="https://apis.google.com/js/api.js"></script>
+</body>
+</html>
