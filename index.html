@@ -4,8 +4,14 @@ const API_URL = "https://api.torn.com/faction/1117?selections=rankedwars&key=wI5
 // Reference to the table body
 const targetsTable = document.getElementById('targetsTable');
 
-// Track timers for each target
-const countdowns = {};
+// Mock data for testing
+const mockData = {
+    participants: {
+        1: { name: "Player1", hospital_timestamp: Math.floor(Date.now() / 1000) + 300 },
+        2: { name: "Player2", hospital_timestamp: null },
+        3: { name: "Player3", hospital_timestamp: Math.floor(Date.now() / 1000) + 120 },
+    },
+};
 
 // Fetch data from the Torn API
 async function fetchTornData() {
@@ -13,35 +19,25 @@ async function fetchTornData() {
         const response = await fetch(API_URL);
         const data = await response.json();
 
-        if (data.error) {
-            console.error("API Error:", data.error);
-            populateTable(); // Populate with fallback message
+        if (data.error || !data.rankedwars || !data.rankedwars.participants) {
+            console.warn("No active ranked war data found. Using mock data for testing.");
+            populateTable(mockData.participants); // Use mock data
             return;
         }
 
-        populateTable(data.rankedwars);
+        populateTable(data.rankedwars.participants);
     } catch (error) {
         console.error("Fetch Error:", error);
-        populateTable(); // Populate with fallback message
+        console.warn("Using mock data for testing.");
+        populateTable(mockData.participants); // Use mock data
     }
 }
 
 // Populate table with ranked war data
-function populateTable(rankedWars) {
+function populateTable(participants) {
     targetsTable.innerHTML = ""; // Clear existing rows
 
-    if (!rankedWars || !rankedWars.participants) {
-        // Display a message when no ranked war data is available
-        const row = document.createElement('tr');
-        const messageCell = document.createElement('td');
-        messageCell.textContent = "No active ranked wars at the moment.";
-        messageCell.colSpan = 3; // Span across all columns
-        row.appendChild(messageCell);
-        targetsTable.appendChild(row);
-        return;
-    }
-
-    const targets = Object.values(rankedWars.participants);
+    const targets = Object.values(participants);
     targets.forEach((participant, index) => {
         const row = document.createElement('tr');
         row.id = `row-${index}`;
@@ -53,7 +49,10 @@ function populateTable(rankedWars) {
         // Status dropdown cell
         const statusCell = document.createElement('td');
         const dropdown = document.createElement('select');
-        dropdown.innerHTML = `<option value="FREE">FREE</option><option value="DIBS">DIBS</option>`;
+        dropdown.innerHTML = `
+            <option value="FREE">FREE</option>
+            <option value="DIBS">DIBS</option>
+        `;
         dropdown.addEventListener('change', () => handleStatusChange(index, dropdown));
         statusCell.appendChild(dropdown);
 
@@ -99,22 +98,18 @@ function startHospitalCountdown(endTimestamp, timerDisplay) {
     }, 1000);
 }
 
-// Mock data for testing
-const mockData = {
-    participants: {
-        1: { name: "Player1", hospital_timestamp: Math.floor(Date.now() / 1000) + 300 },
-        2: { name: "Player2", hospital_timestamp: null },
-    }
-};
-
 // Format hospital time for display
 function formatHospitalTime(timestamp) {
     const time = new Date(timestamp * 1000);
     return time.toLocaleTimeString();
 }
 
-// Use mock data for testing instead of API
-populateTable(mockData);
+// Initialize table with mock data for immediate testing
+populateTable(mockData.participants);
+
+// Uncomment this to fetch live data from Torn API
+// fetchTornData();
+
 
 // Uncomment this line to fetch real data from the API when ready
 // fetchTornData();
