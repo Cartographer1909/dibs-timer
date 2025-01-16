@@ -3,56 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DIBS Countdown</title>
+    <title>DIBS Timer</title>
     <style>
-        body { font-family: Arial, sans-serif; }
-        .timer { font-size: 3em; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f7f7f7;
+            color: #333;
+        }
+        header {
+            background-color: #333;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .timer {
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+        .target-section {
+            margin-bottom: 30px;
+        }
+        select {
+            padding: 10px;
+            font-size: 1em;
+            margin-top: 10px;
+        }
+        .status {
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
+        .button {
+            padding: 10px 20px;
+            font-size: 1em;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .timer-container {
+            margin-top: 30px;
+        }
     </style>
 </head>
 <body>
-    <h1>Call DIBS on a Target</h1>
+    <header>
+        <h1>Call DIBS on a Target</h1>
+    </header>
 
-    <!-- Dropdown for selecting DIBS or FREE -->
-    <select id="targetSelect" onchange="handleSelectChange()">
-        <option value="FREE">FREE</option>
-        <option value="DIBS">DIBS</option>
-    </select>
-    
-    <!-- Display the countdown timer -->
-    <div class="timer" id="countdownTimer">5:00</div>
-    
+    <div class="container">
+        <!-- Target Selection Section -->
+        <div class="target-section">
+            <label for="targetSelect">Select Target:</label>
+            <select id="targetSelect" onchange="handleSelectChange()">
+                <option value="FREE">FREE</option>
+                <option value="DIBS">DIBS</option>
+            </select>
+        </div>
+
+        <!-- DIBS Status Display -->
+        <div class="status">
+            <strong>Current Status: </strong><span id="statusDisplay">FREE</span>
+        </div>
+
+        <!-- Countdown Timer Section -->
+        <div class="timer-container">
+            <div class="timer" id="countdownTimer">5:00</div>
+            <button class="button" id="startButton" onclick="startCountdown()">Start DIBS</button>
+            <button class="button" id="resetButton" onclick="resetCountdown()">Reset Timer</button>
+        </div>
+    </div>
+
     <script>
         let countdownInterval;
         let endTime;
+        let targetStatus = "FREE";
 
-        // Initialize the Google Sheets API
-        function initializeApi() {
-            gapi.client.init({
-                apiKey: 'YOUR_API_KEY',
-                clientId: 'YOUR_CLIENT_ID',
-                discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
-                scope: "https://www.googleapis.com/auth/spreadsheets"
-            }).then(function () {
-                gapi.auth2.getAuthInstance().signIn();
-            });
-        }
-
-        // Load the Google API Client Library
-        function loadGoogleApi() {
-            gapi.load("client:auth2", initializeApi);
-        }
-
-        // Handle when the "DIBS" option is selected
+        // Handle changes in the dropdown
         function handleSelectChange() {
             const selectedValue = document.getElementById("targetSelect").value;
 
             if (selectedValue === "DIBS") {
                 startCountdown();
-                updateSheet("DIBS");
+                updateStatus("DIBS");
             } else {
                 resetCountdown();
-                updateSheet("FREE");
+                updateStatus("FREE");
             }
+        }
+
+        // Update status display
+        function updateStatus(status) {
+            document.getElementById("statusDisplay").textContent = status;
         }
 
         // Start the countdown timer
@@ -67,7 +122,8 @@
                 if (remainingTime <= 0) {
                     clearInterval(countdownInterval);
                     timerDisplay.textContent = "00:00";
-                    updateSheet("FREE");
+                    updateStatus("FREE");
+                    document.getElementById("targetSelect").value = "FREE";
                 } else {
                     const minutes = Math.floor(remainingTime / 60000);
                     const seconds = Math.floor((remainingTime % 60000) / 1000);
@@ -80,34 +136,9 @@
         function resetCountdown() {
             clearInterval(countdownInterval);
             document.getElementById("countdownTimer").textContent = "5:00";
+            updateStatus("FREE");
+            document.getElementById("targetSelect").value = "FREE";
         }
-
-        // Update the Google Sheet with the new status ("DIBS" or "FREE")
-        function updateSheet(status) {
-            const spreadsheetId = 'YOUR_SPREADSHEET_ID';
-            const range = 'Sheet1!F2'; // Assuming you're updating the value in cell F2 (you can adjust this)
-            const valueRange = {
-                majorDimension: "ROWS",
-                values: [[status]]
-            };
-
-            const request = gapi.client.sheets.spreadsheets.values.update({
-                spreadsheetId: spreadsheetId,
-                range: range,
-                valueInputOption: "RAW",
-                resource: valueRange
-            });
-
-            request.then(function (response) {
-                console.log('Sheet updated:', response);
-            });
-        }
-
-        // Load the Google API client library
-        loadGoogleApi();
     </script>
-
-    <!-- Load the Google API client library -->
-    <script src="https://apis.google.com/js/api.js"></script>
 </body>
 </html>
