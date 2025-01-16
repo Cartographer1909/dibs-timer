@@ -1,157 +1,92 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DIBS Timer</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f9;
-            color: #333;
-        }
-        header {
-            background-color: #333;
-            color: white;
-            padding: 20px 0;
-            text-align: center;
-        }
-        .container {
-            max-width: 900px;
-            margin: 20px auto;
-            padding: 20px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background-color: #f4f4f4;
-        }
-        select {
-            padding: 8px;
-            font-size: 1em;
-        }
-        .timer {
-            font-size: 1.2em;
-            color: #555;
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <h1>DIBS Timer</h1>
-        <p>Call DIBS on a target for 5 minutes!</p>
-    </header>
+// Torn API configuration
+const API_URL = "https://api.torn.com/faction/1117?selections=rankedwars&key=wI5WFpMW2K3YnLNx&comment";
 
-    <div class="container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Target</th>
-                    <th>Status</th>
-                    <th>Timer</th>
-                </tr>
-            </thead>
-            <tbody id="targetsTable">
-                <!-- Rows will be dynamically populated here -->
-            </tbody>
-        </table>
-    </div>
+// Reference to the table body
+const targetsTable = document.getElementById('targetsTable');
 
-    <script>
-        // List of targets (you can modify this array)
-        const targets = ["Zoot", "Suit", "Kai", "Nova", "Echo"];
+// Track timers for each target
+const countdowns = {};
 
-        // Reference to the table body
-        const targetsTable = document.getElementById('targetsTable');
+// Fetch data from the Torn API
+async function fetchTornData() {
+    try {
+        const response = await fetch(API_URL);
+        const data = await response.json();
 
-        // Track timers for each target
-        const countdowns = {};
-
-        // Populate table with target rows
-        targets.forEach((target, index) => {
-            const row = document.createElement('tr');
-            row.id = `row-${index}`;
-
-            // Target name cell
-            const targetCell = document.createElement('td');
-            targetCell.textContent = target;
-
-            // Status dropdown cell
-            const statusCell = document.createElement('td');
-            const dropdown = document.createElement('select');
-            dropdown.innerHTML = `<option value="FREE">FREE</option><option value="DIBS">DIBS</option>`;
-            dropdown.addEventListener('change', () => handleStatusChange(index, dropdown));
-            statusCell.appendChild(dropdown);
-
-            // Timer cell
-            const timerCell = document.createElement('td');
-            const timerDisplay = document.createElement('div');
-            timerDisplay.textContent = "5:00";
-            timerDisplay.className = 'timer';
-            timerCell.appendChild(timerDisplay);
-
-            // Append cells to the row
-            row.appendChild(targetCell);
-            row.appendChild(statusCell);
-            row.appendChild(timerCell);
-
-            // Append row to the table
-            targetsTable.appendChild(row);
-
-            // Initialize countdown for this row
-            countdowns[index] = null;
-        });
-
-        // Handle status dropdown change
-        function handleStatusChange(index, dropdown) {
-            const selectedValue = dropdown.value;
-            const timerDisplay = document.querySelector(`#row-${index} .timer`);
-
-            if (selectedValue === "DIBS") {
-                startCountdown(index, timerDisplay, dropdown);
-            } else {
-                resetCountdown(index, timerDisplay);
-            }
+        if (data.error) {
+            console.error("API Error:", data.error);
+            return;
         }
 
-        // Start countdown for the given index
-        function startCountdown(index, timerDisplay, dropdown) {
-            if (countdowns[index]) clearInterval(countdowns[index]);
+        populateTable(data.rankedwars);
+    } catch (error) {
+        console.error("Fetch Error:", error);
+    }
+}
 
-            const endTime = new Date().getTime() + 5 * 60 * 1000; // 5 minutes from now
-            countdowns[index] = setInterval(() => {
-                const currentTime = new Date().getTime();
-                const remainingTime = endTime - currentTime;
+// Populate table with ranked war data
+function populateTable(rankedWars) {
+    targetsTable.innerHTML = ""; // Clear existing rows
 
-                if (remainingTime <= 0) {
-                    clearInterval(countdowns[index]);
-                    timerDisplay.textContent = "5:00";
-                    dropdown.value = "FREE"; // Reset status to FREE
-                } else {
-                    const minutes = Math.floor(remainingTime / 60000);
-                    const seconds = Math.floor((remainingTime % 60000) / 1000);
-                    timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
-                }
-            }, 1000);
+    const targets = Object.values(rankedWars.participants || {});
+
+    targets.forEach((participant, index) => {
+        const row = document.createElement('tr');
+        row.id = `row-${index}`;
+
+        // Name cell
+        const targetCell = document.createElement('td');
+        targetCell.textContent = participant.name;
+
+        // Status dropdown cell
+        const statusCell = document.createElement('td');
+        const dropdown = document.createElement('select');
+        dropdown.innerHTML = `<option value="FREE">FREE</option><option value="DIBS">DIBS</option>`;
+        dropdown.addEventListener('change', () => handleStatusChange(index, dropdown));
+        statusCell.appendChild(dropdown);
+
+        // Timer cell
+        const timerCell = document.createElement('td');
+        const timerDisplay = document.createElement('div');
+        timerDisplay.textContent = participant.hospital_timestamp
+            ? formatHospitalTime(participant.hospital_timestamp)
+            : "N/A";
+        timerDisplay.className = 'timer';
+        timerCell.appendChild(timerDisplay);
+
+        // Append cells to the row
+        row.appendChild(targetCell);
+        row.appendChild(statusCell);
+        row.appendChild(timerCell);
+
+        // Append row to the table
+        targetsTable.appendChild(row);
+
+        // Initialize countdown for this row if hospital timer exists
+        if (participant.hospital_timestamp) {
+            startHospitalCountdown(participant.hospital_timestamp, timerDisplay);
         }
+    });
+}
 
-        // Reset countdown for the given index
-        function resetCountdown(index, timerDisplay) {
-            clearInterval(countdowns[index]);
-            timerDisplay.textContent = "5:00";
+// Start hospital timer countdown
+function startHospitalCountdown(endTimestamp, timerDisplay) {
+    const endTime = endTimestamp * 1000; // Convert to milliseconds
+
+    const interval = setInterval(() => {
+        const currentTime = new Date().getTime();
+        const remainingTime = endTime - currentTime;
+
+        if (remainingTime <= 0) {
+            clearInterval(interval);
+            timerDisplay.textContent = "Ready";
+        } else {
+            const minutes = Math.floor(remainingTime / 60000);
+            const seconds = Math.floor((remainingTime % 60000) / 1000);
+            timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
         }
-    </script>
-</body>
-</html>
+    }, 1000);
+}
+
+// Format hospital time for display
+function fo
