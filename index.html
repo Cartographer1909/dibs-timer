@@ -89,4 +89,53 @@ function startHospitalCountdown(endTimestamp, timerDisplay) {
 }
 
 // Format hospital time for display
-function fo
+function formatHospitalTime(hospitalTimestamp) {
+    const remainingTime = hospitalTimestamp * 1000 - new Date().getTime();
+    if (remainingTime <= 0) return "Ready";
+
+    const minutes = Math.floor(remainingTime / 60000);
+    const seconds = Math.floor((remainingTime % 60000) / 1000);
+    return `${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
+}
+
+// Handle status dropdown change
+function handleStatusChange(index, dropdown) {
+    const selectedValue = dropdown.value;
+    const timerDisplay = document.querySelector(`#row-${index} .timer`);
+
+    if (selectedValue === "DIBS") {
+        startCountdown(index, timerDisplay, dropdown);
+    } else {
+        resetCountdown(index, timerDisplay);
+    }
+}
+
+// Start dibs countdown
+function startCountdown(index, timerDisplay, dropdown) {
+    if (countdowns[index]) clearInterval(countdowns[index]);
+
+    const endTime = new Date().getTime() + 5 * 60 * 1000; // 5 minutes from now
+    countdowns[index] = setInterval(() => {
+        const currentTime = new Date().getTime();
+        const remainingTime = endTime - currentTime;
+
+        if (remainingTime <= 0) {
+            clearInterval(countdowns[index]);
+            timerDisplay.textContent = "5:00";
+            dropdown.value = "FREE"; // Reset status to FREE
+        } else {
+            const minutes = Math.floor(remainingTime / 60000);
+            const seconds = Math.floor((remainingTime % 60000) / 1000);
+            timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
+        }
+    }, 1000);
+}
+
+// Reset dibs countdown
+function resetCountdown(index, timerDisplay) {
+    clearInterval(countdowns[index]);
+    timerDisplay.textContent = "5:00";
+}
+
+// Fetch data on page load
+fetchTornData();
