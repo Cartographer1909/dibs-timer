@@ -9,25 +9,22 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f7f7f7;
+            background-color: #f4f4f9;
             color: #333;
         }
         header {
             background-color: #333;
             color: white;
-            padding: 10px 0;
+            padding: 20px 0;
             text-align: center;
         }
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 20px auto;
             padding: 20px;
             background-color: white;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        .target-section {
-            margin-bottom: 30px;
         }
         table {
             width: 100%;
@@ -36,126 +33,112 @@
         th, td {
             padding: 10px;
             text-align: left;
+            border-bottom: 1px solid #ddd;
         }
         th {
-            background-color: #f2f2f2;
+            background-color: #f4f4f4;
         }
         select {
-            padding: 10px;
+            padding: 8px;
             font-size: 1em;
-            margin-top: 10px;
         }
         .timer {
-            font-size: 1.5em;
-            margin-top: 10px;
-        }
-        .status {
-            margin-top: 20px;
             font-size: 1.2em;
-        }
-        .button {
-            padding: 10px 20px;
-            font-size: 1em;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .button:hover {
-            background-color: #45a049;
+            color: #555;
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>Call DIBS on Targets</h1>
+        <h1>DIBS Timer</h1>
+        <p>Call DIBS on a target for 5 minutes!</p>
     </header>
 
     <div class="container">
-        <h2>Targets</h2>
         <table>
             <thead>
                 <tr>
-                    <th>Target Name</th>
+                    <th>Target</th>
                     <th>Status</th>
                     <th>Timer</th>
                 </tr>
             </thead>
             <tbody id="targetsTable">
-                <!-- Target rows will go here -->
+                <!-- Rows will be dynamically populated here -->
             </tbody>
         </table>
     </div>
 
     <script>
-        // Example targets list (you can add more targets here)
-        const targets = ["Zoot", "Suit", "Kai", "Nova"];
+        // List of targets (you can modify this array)
+        const targets = ["Zoot", "Suit", "Kai", "Nova", "Echo"];
 
-        // Create rows dynamically
+        // Reference to the table body
         const targetsTable = document.getElementById('targetsTable');
+
+        // Track timers for each target
+        const countdowns = {};
+
+        // Populate table with target rows
         targets.forEach((target, index) => {
             const row = document.createElement('tr');
-            row.id = `targetRow${index}`;
+            row.id = `row-${index}`;
 
-            // Target Name
+            // Target name cell
             const targetCell = document.createElement('td');
             targetCell.textContent = target;
 
-            // Status (dropdown)
+            // Status dropdown cell
             const statusCell = document.createElement('td');
-            const statusDropdown = document.createElement('select');
-            statusDropdown.innerHTML = `
-                <option value="FREE">FREE</option>
-                <option value="DIBS">DIBS</option>
-            `;
-            statusDropdown.addEventListener('change', () => handleDibsChange(index, statusDropdown));
+            const dropdown = document.createElement('select');
+            dropdown.innerHTML = `<option value="FREE">FREE</option><option value="DIBS">DIBS</option>`;
+            dropdown.addEventListener('change', () => handleStatusChange(index, dropdown));
+            statusCell.appendChild(dropdown);
 
-            statusCell.appendChild(statusDropdown);
-
-            // Timer
+            // Timer cell
             const timerCell = document.createElement('td');
             const timerDisplay = document.createElement('div');
-            timerDisplay.classList.add('timer');
             timerDisplay.textContent = "5:00";
+            timerDisplay.className = 'timer';
             timerCell.appendChild(timerDisplay);
 
+            // Append cells to the row
             row.appendChild(targetCell);
             row.appendChild(statusCell);
             row.appendChild(timerCell);
+
+            // Append row to the table
             targetsTable.appendChild(row);
+
+            // Initialize countdown for this row
+            countdowns[index] = null;
         });
 
-        let countdownIntervals = {};
-
-        // Handle changes in DIBS dropdown
-        function handleDibsChange(index, dropdown) {
+        // Handle status dropdown change
+        function handleStatusChange(index, dropdown) {
             const selectedValue = dropdown.value;
-            const targetRow = document.getElementById(`targetRow${index}`);
-            const timerDisplay = targetRow.querySelector('.timer');
+            const timerDisplay = document.querySelector(`#row-${index} .timer`);
 
             if (selectedValue === "DIBS") {
-                startCountdown(index, timerDisplay);
+                startCountdown(index, timerDisplay, dropdown);
             } else {
                 resetCountdown(index, timerDisplay);
             }
         }
 
-        // Start countdown for a specific target
-        function startCountdown(index, timerDisplay) {
-            if (countdownIntervals[index]) {
-                clearInterval(countdownIntervals[index]);
-            }
+        // Start countdown for the given index
+        function startCountdown(index, timerDisplay, dropdown) {
+            if (countdowns[index]) clearInterval(countdowns[index]);
 
             const endTime = new Date().getTime() + 5 * 60 * 1000; // 5 minutes from now
-            countdownIntervals[index] = setInterval(function () {
-                const now = new Date().getTime();
-                const remainingTime = endTime - now;
+            countdowns[index] = setInterval(() => {
+                const currentTime = new Date().getTime();
+                const remainingTime = endTime - currentTime;
 
                 if (remainingTime <= 0) {
-                    clearInterval(countdownIntervals[index]);
-                    timerDisplay.textContent = "00:00";
-                    resetDibs(index);
+                    clearInterval(countdowns[index]);
+                    timerDisplay.textContent = "5:00";
+                    dropdown.value = "FREE"; // Reset status to FREE
                 } else {
                     const minutes = Math.floor(remainingTime / 60000);
                     const seconds = Math.floor((remainingTime % 60000) / 1000);
@@ -164,17 +147,10 @@
             }, 1000);
         }
 
-        // Reset countdown for a specific target
+        // Reset countdown for the given index
         function resetCountdown(index, timerDisplay) {
-            clearInterval(countdownIntervals[index]);
+            clearInterval(countdowns[index]);
             timerDisplay.textContent = "5:00";
-        }
-
-        // Reset DIBS and status to FREE
-        function resetDibs(index) {
-            const targetRow = document.getElementById(`targetRow${index}`);
-            const statusDropdown = targetRow.querySelector('select');
-            statusDropdown.value = "FREE";
         }
     </script>
 </body>
