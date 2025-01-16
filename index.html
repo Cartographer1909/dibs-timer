@@ -15,12 +15,14 @@ async function fetchTornData() {
 
         if (data.error) {
             console.error("API Error:", data.error);
+            populateTable(); // Populate with fallback message
             return;
         }
 
         populateTable(data.rankedwars);
     } catch (error) {
         console.error("Fetch Error:", error);
+        populateTable(); // Populate with fallback message
     }
 }
 
@@ -28,8 +30,18 @@ async function fetchTornData() {
 function populateTable(rankedWars) {
     targetsTable.innerHTML = ""; // Clear existing rows
 
-    const targets = Object.values(rankedWars.participants || {});
+    if (!rankedWars || !rankedWars.participants) {
+        // Display a message when no ranked war data is available
+        const row = document.createElement('tr');
+        const messageCell = document.createElement('td');
+        messageCell.textContent = "No active ranked wars at the moment.";
+        messageCell.colSpan = 3; // Span across all columns
+        row.appendChild(messageCell);
+        targetsTable.appendChild(row);
+        return;
+    }
 
+    const targets = Object.values(rankedWars.participants);
     targets.forEach((participant, index) => {
         const row = document.createElement('tr');
         row.id = `row-${index}`;
@@ -72,7 +84,6 @@ function populateTable(rankedWars) {
 // Start hospital timer countdown
 function startHospitalCountdown(endTimestamp, timerDisplay) {
     const endTime = endTimestamp * 1000; // Convert to milliseconds
-
     const interval = setInterval(() => {
         const currentTime = new Date().getTime();
         const remainingTime = endTime - currentTime;
@@ -88,54 +99,22 @@ function startHospitalCountdown(endTimestamp, timerDisplay) {
     }, 1000);
 }
 
-// Format hospital time for display
-function formatHospitalTime(hospitalTimestamp) {
-    const remainingTime = hospitalTimestamp * 1000 - new Date().getTime();
-    if (remainingTime <= 0) return "Ready";
-
-    const minutes = Math.floor(remainingTime / 60000);
-    const seconds = Math.floor((remainingTime % 60000) / 1000);
-    return `${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
-}
-
-// Handle status dropdown change
-function handleStatusChange(index, dropdown) {
-    const selectedValue = dropdown.value;
-    const timerDisplay = document.querySelector(`#row-${index} .timer`);
-
-    if (selectedValue === "DIBS") {
-        startCountdown(index, timerDisplay, dropdown);
-    } else {
-        resetCountdown(index, timerDisplay);
+// Mock data for testing
+const mockData = {
+    participants: {
+        1: { name: "Player1", hospital_timestamp: Math.floor(Date.now() / 1000) + 300 },
+        2: { name: "Player2", hospital_timestamp: null },
     }
+};
+
+// Format hospital time for display
+function formatHospitalTime(timestamp) {
+    const time = new Date(timestamp * 1000);
+    return time.toLocaleTimeString();
 }
 
-// Start dibs countdown
-function startCountdown(index, timerDisplay, dropdown) {
-    if (countdowns[index]) clearInterval(countdowns[index]);
+// Use mock data for testing instead of API
+populateTable(mockData);
 
-    const endTime = new Date().getTime() + 5 * 60 * 1000; // 5 minutes from now
-    countdowns[index] = setInterval(() => {
-        const currentTime = new Date().getTime();
-        const remainingTime = endTime - currentTime;
-
-        if (remainingTime <= 0) {
-            clearInterval(countdowns[index]);
-            timerDisplay.textContent = "5:00";
-            dropdown.value = "FREE"; // Reset status to FREE
-        } else {
-            const minutes = Math.floor(remainingTime / 60000);
-            const seconds = Math.floor((remainingTime % 60000) / 1000);
-            timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
-        }
-    }, 1000);
-}
-
-// Reset dibs countdown
-function resetCountdown(index, timerDisplay) {
-    clearInterval(countdowns[index]);
-    timerDisplay.textContent = "5:00";
-}
-
-// Fetch data on page load
-fetchTornData();
+// Uncomment this line to fetch real data from the API when ready
+// fetchTornData();
